@@ -1,0 +1,8 @@
+.lightSquare{
+    background-color: transparent;
+    position: relative
+}
+.darkSquare{
+    background-color:chocolate;
+    position: relative
+}
