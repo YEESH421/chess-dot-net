@@ -1,8 +1,11 @@
 .lightSquare{
-    background-color: transparent;
+    background-color: wheat;
     position: relative
 }
 .darkSquare{
     background-color:chocolate;
     position: relative
 }
+.square {
+    border: 1px solid transparent;
+  }
