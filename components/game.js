@@ -31,15 +31,15 @@ function determinePiece(num, letter) {
         }
     } else if (letter == 'b' || letter == 'g') {
         if (num == 1) {
-            piece = 'wb'
-        } else if (num == 8) {
-            piece = 'bb'
-        }
-    } else if (letter == 'c' || letter == 'f') {
-        if (num == 1) {
             piece = 'wn'
         } else if (num == 8) {
             piece = 'bn'
+        }
+    } else if (letter == 'c' || letter == 'f') {
+        if (num == 1) {
+            piece = 'wb'
+        } else if (num == 8) {
+            piece = 'bb'
         }
     }
     return piece
@@ -64,12 +64,26 @@ function initGame() {
     return squares
 }
 
+function capture(piece, capturesObj){
+    if(piece.charAt(0) =='w'){
+        capturesObj.blackCaptures.push(piece)
+    }else if(piece.charAt(0) =='b'){
+        capturesObj.whiteCaptures.push(piece)
+    }
+    return capturesObj
+}
+
 export default function Game() {
     const [gameState, setGameState] = useState({
         squares: initGame(),
         selectedSquare: null,
         whiteTurn: true,
-        history: []
+        history: [],
+        captures:{
+            whiteCaptures: [],
+            blackCaptures: []
+        }
+
     });
 
     function click(e) {
@@ -90,11 +104,15 @@ export default function Game() {
             if(lastSelectedSquare != null){
                 const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.squares[lastSelectedSquare].piece, gameState.history)
                 if(valid){
-                    gameState.squares[i].piece = gameState.squares[lastSelectedSquare].piece
-                    gameState.squares[lastSelectedSquare].piece = null
-                    if(enPassant){
+                    if(gameState.squares[i].piece){
+                        gameState.captures = capture(gameState.squares[i].piece, gameState.captures)
+                    }
+                    else if(enPassant){
+                        gameState.captures = capture(gameState.squares[enPassant].piece, gameState.captures)
                         gameState.squares[enPassant].piece = null
                     }
+                    gameState.squares[i].piece = gameState.squares[lastSelectedSquare].piece
+                    gameState.squares[lastSelectedSquare].piece = null
                     gameState.whiteTurn = !gameState.whiteTurn
                     gameState.history.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
                 }
@@ -107,11 +125,18 @@ export default function Game() {
             squares: [...gameState.squares],
             selectedSquare: currentSquareInd,
             whiteTurn: gameState.whiteTurn,
-            history: gameState.history
+            history: gameState.history,
+            captures: gameState.captures
         })
     }
 
     return (
-        <Board squares={gameState.squares} click={e => click(e)}/>
+        <div>
+            <Board squares={gameState.squares} click={e => click(e)}/>
+            {gameState.captures.whiteCaptures.length}
+            {gameState.captures.blackCaptures.length}
+        </div>
+        
+        
     )
 }
