@@ -9,6 +9,7 @@ export default function Square(props) {
             id={props.id}
             className={props.lightColor ? `${styles.square}  ${styles.lightSquare}` : `${styles.square}  ${styles.darkSquare}`} 
             onClick = {props.click}
+            name = {props.index}
             style={{
                 backgroundImage: `url(${backgroundImageUrl})`,
                 backgroundSize: 'contain',
