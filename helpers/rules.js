@@ -1,5 +1,6 @@
-export function isValidMove(squares, src, dest, piece, history) {
-  let isWhitePiece = piece.charAt(0) === 'w'
+export function isValidMove(squares, src, dest, history) {
+  const piece = squares[src].piece
+  const isWhitePiece = piece.charAt(0) === 'w'
   if (piece.charAt(1) === 'p') {
     return isValidPawnMove(squares, src, dest, isWhitePiece, history)
   } else if (piece.charAt(1) === 'n') {
@@ -8,12 +9,25 @@ export function isValidMove(squares, src, dest, piece, history) {
     return (isValidBishopMove(squares, src, dest))
   } else if (piece.charAt(1) === 'r') {
     return (isValidRookMove(squares, src, dest))
-  } else if(piece.charAt(1) === 'q'){
+  } else if (piece.charAt(1) === 'q') {
     return (isValidQueenMove(squares, src, dest))
-  } else if(piece.charAt(1) === 'k'){
+  } else if (piece.charAt(1) === 'k') {
     return (isValidKingMove(squares, src, dest))
   }
   return [false, null]
+}
+
+export function isCheck(squares, isWhitePiece, history) {
+  const king = isWhitePiece ? 'wk' : 'bk'
+  const oppositeColor = isWhitePiece ? 'b' : 'w'
+  const kingInd = squares.findIndex(e => e.piece == king)
+  const threatensKing = (i) => isValidMove(squares, i, kingInd, history)
+  for(let i = 0; i < squares.length; i++){
+    if(squares[i].piece && squares[i].piece.charAt(0) == oppositeColor && threatensKing(i)[0]){
+      return true
+    }
+  }
+  return false
 }
 
 function isValidPawnMove(squares, src, dest, isWhitePiece, history) {
@@ -59,20 +73,20 @@ function isValidKnightMove(squares, src, dest) {
   return [isValid, null]
 }
 
-function isValidBishopMove(squares, src, dest){
+function isValidBishopMove(squares, src, dest) {
   let isValid = false
   let increment = -1
-  if(Math.abs(dest - src) % 9 === 0) {
+  if (Math.abs(dest - src) % 9 === 0) {
     increment = 9
-  }else if (Math.abs(dest - src) % 7 === 0) {
+  } else if (Math.abs(dest - src) % 7 === 0) {
     increment = 7
   }
-  if(increment > 0) {
+  if (increment > 0) {
     let obstructing = false
     let i = dest < src ? dest + increment : src + increment
-    let end = dest < src ? src : dest 
-    for(i; i < end; i+=increment){
-      if(squares[i].piece){
+    let end = dest < src ? src : dest
+    for (i; i < end; i += increment) {
+      if (squares[i].piece) {
         obstructing = true
       }
     }
@@ -81,22 +95,22 @@ function isValidBishopMove(squares, src, dest){
   return [isValid, null]
 }
 
-function isValidRookMove(squares, src, dest){
+function isValidRookMove(squares, src, dest) {
   let isValid = false
   let destSquare = squares[dest]
   let srcSquare = squares[src]
   let increment = -1
-  if(destSquare.coordinate.charAt(0) == srcSquare.coordinate.charAt(0)){
+  if (destSquare.coordinate.charAt(0) == srcSquare.coordinate.charAt(0)) {
     increment = 8
-  }else if(destSquare.coordinate.charAt(1) == srcSquare.coordinate.charAt(1)){
+  } else if (destSquare.coordinate.charAt(1) == srcSquare.coordinate.charAt(1)) {
     increment = 1
   }
-  if(increment > 0) {
+  if (increment > 0) {
     let obstructing = false
     let i = dest < src ? dest + increment : src + increment
-    let end = dest < src ? src : dest 
-    for(i; i < end; i+=increment){
-      if(squares[i].piece){
+    let end = dest < src ? src : dest
+    for (i; i < end; i += increment) {
+      if (squares[i].piece) {
         obstructing = true
       }
     }
@@ -105,16 +119,16 @@ function isValidRookMove(squares, src, dest){
   return [isValid, null]
 }
 
-function isValidQueenMove(squares, src, dest){
+function isValidQueenMove(squares, src, dest) {
   const [validRook, trash1] = isValidRookMove(squares, src, dest)
   const [validBish, trash2] = isValidBishopMove(squares, src, dest)
   return [validRook || validBish, null]
 }
 
-function isValidKingMove(squares, src, dest){
+function isValidKingMove(squares, src, dest) {
   let destSquare = squares[dest]
   let srcSquare = squares[src]
-  if(Math.abs(dest - src) == 9 ||  (Math.abs(dest - src) == 7 && destSquare.coordinate.charAt(1) != srcSquare.coordinate.charAt(1)) || Math.abs(dest - src) == 1 ||  Math.abs(dest - src) == 8){
+  if (Math.abs(dest - src) == 9 || (Math.abs(dest - src) == 7 && destSquare.coordinate.charAt(1) != srcSquare.coordinate.charAt(1)) || Math.abs(dest - src) == 1 || Math.abs(dest - src) == 8) {
     return isValidQueenMove(squares, src, dest)
   }
   return [false, null]

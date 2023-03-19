@@ -1,6 +1,7 @@
 import Board from "./board";
 import { useState } from 'react';
-import { isValidMove } from "../helpers/rules";
+import { isCheck, isValidMove } from "../helpers/rules";
+const _ = require('lodash');
 
 const vertical = [1, 2, 3, 4, 5, 6, 7, 8]
 const horizontal = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -78,11 +79,20 @@ export default function Game() {
         squares: initGame(),
         selectedSquare: null,
         whiteTurn: true,
-        history: [],
+        moves: [],
         captures:{
             whiteCaptures: [],
             blackCaptures: []
-        }
+        },
+        history:[{
+            squares: initGame(),
+            whiteTurn: true,
+            moves: [],
+            captures:{
+                whiteCaptures: [],
+                blackCaptures: []
+            },
+        }]
 
     });
 
@@ -102,8 +112,9 @@ export default function Game() {
             }
         }else{
             if(lastSelectedSquare != null){
-                const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.squares[lastSelectedSquare].piece, gameState.history)
+                const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.moves)
                 if(valid){
+                    const oldSquares =  _.cloneDeep(gameState.squares)
                     if(gameState.squares[i].piece){
                         gameState.captures = capture(gameState.squares[i].piece, gameState.captures)
                     }
@@ -113,8 +124,15 @@ export default function Game() {
                     }
                     gameState.squares[i].piece = gameState.squares[lastSelectedSquare].piece
                     gameState.squares[lastSelectedSquare].piece = null
-                    gameState.whiteTurn = !gameState.whiteTurn
-                    gameState.history.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
+                    let ownCheck = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+                    if (ownCheck) {
+                        gameState.squares = oldSquares
+                    } else{
+                        gameState.whiteTurn = !gameState.whiteTurn
+                        gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)    
+                        const {squares, whiteTurn, moves, captures} = gameState
+                        gameState.history.push({squares, whiteTurn, moves, captures})               
+                    }
                 }
             }
         }
@@ -125,8 +143,9 @@ export default function Game() {
             squares: [...gameState.squares],
             selectedSquare: currentSquareInd,
             whiteTurn: gameState.whiteTurn,
-            history: gameState.history,
-            captures: gameState.captures
+            moves: gameState.moves,
+            captures: gameState.captures,
+            history: gameState.history
         })
     }
 
