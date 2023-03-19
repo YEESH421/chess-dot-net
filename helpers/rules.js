@@ -24,10 +24,10 @@ export function isCheck(squares, isWhitePiece, history) {
   const threatensKing = (i) => isValidMove(squares, i, kingInd, history)
   for(let i = 0; i < squares.length; i++){
     if(squares[i].piece && squares[i].piece.charAt(0) == oppositeColor && threatensKing(i)[0]){
-      return true
+      return [true, kingInd]
     }
   }
-  return false
+  return [false, kingInd]
 }
 
 function isValidPawnMove(squares, src, dest, isWhitePiece, history) {

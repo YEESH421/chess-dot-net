@@ -7,7 +7,7 @@ export default function Board(props) {
     let i = 0
     squares.forEach(e => {
         board.push(
-            <Square key={e.coordinate} id={e.coordinate} selected={e.selected} piece={e.piece} lightColor={e.lightColor} click={props.click} index={i}>
+            <Square key={e.coordinate} id={e.coordinate} selected={e.selected} check={e.check} piece={e.piece} lightColor={e.lightColor} click={props.click} index={i}>
             </Square>)
         i++
     });
