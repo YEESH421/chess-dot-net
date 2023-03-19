@@ -76,10 +76,14 @@ function isValidKnightMove(squares, src, dest) {
 function isValidBishopMove(squares, src, dest) {
   let isValid = false
   let increment = -1
-  if (Math.abs(dest - src) % 9 === 0) {
-    increment = 9
-  } else if (Math.abs(dest - src) % 7 === 0) {
-    increment = 7
+  let destSquare = squares[dest]
+  let srcSquare = squares[src]
+  if(destSquare.lightColor === srcSquare.lightColor){
+    if (Math.abs(dest - src) % 9 === 0 ) {
+      increment = 9
+    } else if (Math.abs(dest - src) % 7 === 0) {
+      increment = 7
+    }
   }
   if (increment > 0) {
     let obstructing = false
@@ -100,9 +104,9 @@ function isValidRookMove(squares, src, dest) {
   let destSquare = squares[dest]
   let srcSquare = squares[src]
   let increment = -1
-  if (destSquare.coordinate.charAt(0) == srcSquare.coordinate.charAt(0)) {
+  if (destSquare.coordinate.charAt(0) === srcSquare.coordinate.charAt(0)) {
     increment = 8
-  } else if (destSquare.coordinate.charAt(1) == srcSquare.coordinate.charAt(1)) {
+  } else if (destSquare.coordinate.charAt(1) === srcSquare.coordinate.charAt(1)) {
     increment = 1
   }
   if (increment > 0) {
