@@ -1,6 +1,8 @@
 import Board from "./board";
-import { useState } from 'react';
-import { isCheck, isValidMove } from "../helpers/rules";
+import { useState, useEffect } from 'react';
+import { isCheck, isValidMove } from "../helpers/rules"
+import Popup from 'reactjs-popup';
+
 const _ = require('lodash');
 
 const vertical = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -54,7 +56,7 @@ function initGame() { //returns an array representation of the board with all th
             let piece = determinePiece(vertical[i], horizontal[j])
             squares.push(
                 {
-                    coordinate: horizontal[j] + vertical[i], 
+                    coordinate: horizontal[j] + vertical[i],
                     selected: false,
                     'piece': piece,
                     'lightColor': lightColor,
@@ -66,10 +68,10 @@ function initGame() { //returns an array representation of the board with all th
     return squares
 }
 
-function capture(piece, capturesObj){ //updates captured pieces for black and white
-    if(piece.charAt(0) =='w'){
+function capture(piece, capturesObj) { //updates captured pieces for black and white
+    if (piece.charAt(0) == 'w') {
         capturesObj.blackCaptures.push(piece)
-    }else if(piece.charAt(0) =='b'){
+    } else if (piece.charAt(0) == 'b') {
         capturesObj.whiteCaptures.push(piece)
     }
     return capturesObj
@@ -81,45 +83,90 @@ export default function Game() {
         selectedSquare: null,
         whiteTurn: true,
         moves: [],
-        captures:{
+        captures: {
             whiteCaptures: [],
             blackCaptures: []
         },
-        history:[{
+        history: [{
             squares: initGame(),
             whiteTurn: true,
             moves: [],
-            captures:{
+            captures: {
                 whiteCaptures: [],
                 blackCaptures: []
             },
         }]
 
     });
+    const [open, setOpen] = useState(false)
+    const [promotedPiece, setPromotedPiece] = useState(null)
+    const [promoteDestIndx, setPromoteDestIndx] = useState(null)
+    const [promoteSrcIndx, setPromoteSrcIndx] = useState(null)
+    const [check, setCheck] = useState(false)
+    //This use effect handles pawn promotions and determines own checks and opponent checks
+    useEffect(() => {
+        if (promotedPiece) {
+            let i = promoteDestIndx
+            let l = promoteSrcIndx
+            let [ownCheck, ownKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+            gameState.squares[i].piece = promotedPiece
+            gameState.whiteTurn = !gameState.whiteTurn
+            gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
+            gameState.squares[ownKingInd].check = false
+            //Extract elements from current gamestate and push it to the history
+            const { squares, whiteTurn, moves, captures } = gameState
+            gameState.history.push({ squares, whiteTurn, moves, captures })
+            let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+            if (oppCheck) {
+                gameState.squares[oppKingInd].check = true
+            }
+            if (l != null && l != i) {
+                gameState.squares[l].selected = false
+            }
+            setGameState({
+                squares: [...gameState.squares],
+                selectedSquare: null,
+                whiteTurn: gameState.whiteTurn,
+                moves: gameState.moves,
+                captures: gameState.captures,
+                history: gameState.history
+            })
+            setPromotedPiece(null)
+        }
+    }, [promotedPiece])
 
+    useEffect(() => {
+        if(check[0]){
+            if(check[1] === 'b'){
+                return 
+            } else if(check[1] === 'w'){
+                return 
+            }
+        }
+    }, [check])
     function click(e) {
         let id = e.target.id
         let x = horizontal.indexOf(id.charAt(0))
         let y = vertical.indexOf(Number(id.charAt(1)))
-        let i = x+(7-y)*8
+        let i = x + (7 - y) * 8
         //Logic below highlights selected square and shows possible moves. If there was already a selected square, clear the previous selected square.
         let lastSelectedSquare = gameState.selectedSquare
         let currentSquareInd = null
-        if(gameState.squares[i].piece && (gameState.squares[i].piece.charAt(0) === 'w' && gameState.whiteTurn || gameState.squares[i].piece.charAt(0) === 'b' && !gameState.whiteTurn)){
-            let isWhitePiece = gameState.squares[i].piece.charAt(0) == 'w' 
-            if(isWhitePiece == gameState.whiteTurn){ //Condition catches player selecting another one of their pieces after already selecting one
+        if (gameState.squares[i].piece && (gameState.squares[i].piece.charAt(0) === 'w' && gameState.whiteTurn || gameState.squares[i].piece.charAt(0) === 'b' && !gameState.whiteTurn)) {
+            let isWhitePiece = gameState.squares[i].piece.charAt(0) == 'w'
+            if (isWhitePiece == gameState.whiteTurn) { //Condition catches player selecting another one of their pieces after already selecting one
                 gameState.squares[i].selected = !gameState.squares[i].selected
                 currentSquareInd = i
             }
-        }else{ //If player selects any square other than ones with their own pieces, move selected piece there, taking enemy piece on that square if possible
-            if(lastSelectedSquare != null){ //First check if there was a selected piece to move
-                const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.moves) 
-                if(valid){ //See if the move is valid (not including checks)
-                    const oldSquares =  _.cloneDeep(gameState.squares) //keep a copy of the old board in case move results in a check on your own king
-                    if(gameState.squares[i].piece){ //Capture piece if possible
+        } else { //If player selects any square other than ones with their own pieces, move selected piece there, taking enemy piece on that square if possible
+            if (lastSelectedSquare != null) { //First check if there was a selected piece to move
+                const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.moves)
+                if (valid) { //See if the move is valid (not including checks)
+                    const oldSquares = _.cloneDeep(gameState.squares) //keep a copy of the old board in case move results in a check on your own king
+                    if (gameState.squares[i].piece) { //Capture piece if possible
                         gameState.captures = capture(gameState.squares[i].piece, gameState.captures)
                     }
-                    else if(enPassant){
+                    else if (enPassant) {
                         gameState.captures = capture(gameState.squares[enPassant].piece, gameState.captures)
                         gameState.squares[enPassant].piece = null
                     }
@@ -128,22 +175,32 @@ export default function Game() {
                     let [ownCheck, ownKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
                     if (ownCheck) { //In case move results in a check on your king, cancel that move
                         gameState.squares = oldSquares
-                    } else{ //Otherwise, go to next turn, update move history, and highlight checks on the enemy
-                        gameState.whiteTurn = !gameState.whiteTurn 
-                        gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)    
+                    } else { //Otherwise, go to next turn, update move history, and highlight checks on the enemy
+                        if ((gameState.whiteTurn && gameState.squares[i].piece === 'wp' && gameState.squares[i].coordinate.charAt(1) === '8') || (!gameState.whiteTurn && gameState.squares[i].piece === 'bp' && gameState.squares[i].coordinate.charAt(1) === '1')) {
+                            setPromoteDestIndx(i)
+                            setPromoteSrcIndx(lastSelectedSquare)
+                            setOpen(true)
+                            return
+                        }
+                        gameState.whiteTurn = !gameState.whiteTurn
+                        gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
                         gameState.squares[ownKingInd].check = false
                         gameState.squares[lastSelectedSquare].check = false
-                        const {squares, whiteTurn, moves, captures} = gameState
-                        gameState.history.push({squares, whiteTurn, moves, captures})      
-                        let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)     
-                        if(oppCheck) {
+                        setCheck([false, null])
+                        //Extract elements from current gamestate and push it to the history
+                        const { squares, whiteTurn, moves, captures } = gameState
+                        gameState.history.push({ squares, whiteTurn, moves, captures })
+                        let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+                        if (oppCheck) {
+                            let color = gameState.whiteTurn ? 'w' : 'b'
+                            setCheck([true, color])
                             gameState.squares[oppKingInd].check = true
-                        }    
+                        }
                     }
                 }
             }
         }
-        if(lastSelectedSquare != null && lastSelectedSquare != i){
+        if (lastSelectedSquare != null && lastSelectedSquare != i) {
             gameState.squares[lastSelectedSquare].selected = false
         }
         setGameState({
@@ -156,13 +213,34 @@ export default function Game() {
         })
     }
 
+    function promote(piece) {
+        let color = gameState.whiteTurn ? 'w' : 'b'
+        setPromotedPiece(color + piece)
+        setOpen(false)
+    }
+
+    function getPromotionAsset(piece) {
+        let color = gameState.whiteTurn ? 'w' : 'b'
+        return `https://www.chess.com/chess-themes/pieces/classic/150/${color + piece}.png`
+    }
+
     return (
         <div>
-            <Board squares={gameState.squares} click={e => click(e)}/>
+            <Popup open={open} closeOnDocumentClick={false}>
+                <div id="pawn-promotion-modal">
+                    <div className="modal-body">
+                        <img onClick={() => promote('q')} src={getPromotionAsset('q')} />
+                        <img onClick={() => promote('r')} src={getPromotionAsset('r')} />
+                        <img onClick={() => promote('b')} src={getPromotionAsset('b')} />
+                        <img onClick={() => promote('n')} src={getPromotionAsset('n')} />
+                    </div>
+                </div>
+            </Popup>
+            <Board squares={gameState.squares} click={e => click(e)} />
             {gameState.captures.whiteCaptures.length}
             {gameState.captures.blackCaptures.length}
         </div>
-        
-        
+
+
     )
 }

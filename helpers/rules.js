@@ -30,6 +30,13 @@ export function isCheck(squares, isWhitePiece, history) {
   return [false, kingInd]
 }
 
+export function isCheckMate(squares, isWhitePiece, history){
+  const color = isWhitePiece ? 'w' : 'b'
+  for(let i = 0; i < squares.length; i++){
+
+  }
+}
+
 function isValidPawnMove(squares, src, dest, isWhitePiece, history) {
   let destSquare = squares[dest]
   let srcSquare = squares[src]
