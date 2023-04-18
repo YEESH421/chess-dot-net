@@ -1,6 +1,6 @@
 import Board from "./board";
 import { useState, useEffect } from 'react';
-import { isCheck, isValidMove } from "../helpers/rules"
+import { isCheck, isLegalMove, legalMovesForPiece, isMate, findOwnKing } from "../helpers/rules"
 import Popup from 'reactjs-popup';
 
 const _ = require('lodash');
@@ -108,7 +108,7 @@ export default function Game() {
         if (promotedPiece) {
             let i = promoteDestIndx
             let l = promoteSrcIndx
-            let [ownCheck, ownKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+            let  ownKingInd = findOwnKing(gameState.squares, gameState.whiteTurn)
             gameState.squares[i].piece = promotedPiece
             gameState.whiteTurn = !gameState.whiteTurn
             gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
@@ -136,11 +136,11 @@ export default function Game() {
     }, [promotedPiece])
 
     useEffect(() => {
-        if(check[0]){
-            if(check[1] === 'b'){
-                return 
-            } else if(check[1] === 'w'){
-                return 
+        if (check[0]) {
+            if (check[1] === 'b') {
+                return
+            } else if (check[1] === 'w') {
+                return
             }
         }
     }, [check])
@@ -153,16 +153,16 @@ export default function Game() {
         let lastSelectedSquare = gameState.selectedSquare
         let currentSquareInd = null
         if (gameState.squares[i].piece && (gameState.squares[i].piece.charAt(0) === 'w' && gameState.whiteTurn || gameState.squares[i].piece.charAt(0) === 'b' && !gameState.whiteTurn)) {
-            let isWhitePiece = gameState.squares[i].piece.charAt(0) == 'w'
+            let isWhitePiece = gameState.squares[i].piece.charAt(0) === 'w'
             if (isWhitePiece == gameState.whiteTurn) { //Condition catches player selecting another one of their pieces after already selecting one
                 gameState.squares[i].selected = !gameState.squares[i].selected
                 currentSquareInd = i
             }
+            console.log(legalMovesForPiece(gameState.squares, i, gameState.history))
         } else { //If player selects any square other than ones with their own pieces, move selected piece there, taking enemy piece on that square if possible
             if (lastSelectedSquare != null) { //First check if there was a selected piece to move
-                const [valid, enPassant] = isValidMove(gameState.squares, lastSelectedSquare, i, gameState.moves)
+                const [valid, enPassant] = isLegalMove(gameState.squares, lastSelectedSquare, i, gameState.moves)
                 if (valid) { //See if the move is valid (not including checks)
-                    const oldSquares = _.cloneDeep(gameState.squares) //keep a copy of the old board in case move results in a check on your own king
                     if (gameState.squares[i].piece) { //Capture piece if possible
                         gameState.captures = capture(gameState.squares[i].piece, gameState.captures)
                     }
@@ -172,31 +172,32 @@ export default function Game() {
                     }
                     gameState.squares[i].piece = gameState.squares[lastSelectedSquare].piece //Move piece to new square
                     gameState.squares[lastSelectedSquare].piece = null
-                    let [ownCheck, ownKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
-                    if (ownCheck) { //In case move results in a check on your king, cancel that move
-                        gameState.squares = oldSquares
-                    } else { //Otherwise, go to next turn, update move history, and highlight checks on the enemy
-                        if ((gameState.whiteTurn && gameState.squares[i].piece === 'wp' && gameState.squares[i].coordinate.charAt(1) === '8') || (!gameState.whiteTurn && gameState.squares[i].piece === 'bp' && gameState.squares[i].coordinate.charAt(1) === '1')) {
-                            setPromoteDestIndx(i)
-                            setPromoteSrcIndx(lastSelectedSquare)
-                            setOpen(true)
-                            return
-                        }
-                        gameState.whiteTurn = !gameState.whiteTurn
-                        gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
-                        gameState.squares[ownKingInd].check = false
-                        gameState.squares[lastSelectedSquare].check = false
-                        setCheck([false, null])
-                        //Extract elements from current gamestate and push it to the history
-                        const { squares, whiteTurn, moves, captures } = gameState
-                        gameState.history.push({ squares, whiteTurn, moves, captures })
-                        let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
-                        if (oppCheck) {
-                            let color = gameState.whiteTurn ? 'w' : 'b'
-                            setCheck([true, color])
-                            gameState.squares[oppKingInd].check = true
-                        }
+                    //Go to next turn, update move history, and highlight checks on the enemy
+                    if ((gameState.whiteTurn && gameState.squares[i].piece === 'wp' && gameState.squares[i].coordinate.charAt(1) === '8') || (!gameState.whiteTurn && gameState.squares[i].piece === 'bp' && gameState.squares[i].coordinate.charAt(1) === '1')) {
+                        setPromoteDestIndx(i)
+                        setPromoteSrcIndx(lastSelectedSquare)
+                        setOpen(true)
+                        return
                     }
+                    let ownKingInd = findOwnKing(gameState.squares, gameState.whiteTurn)
+                    gameState.whiteTurn = !gameState.whiteTurn
+                    gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
+                    gameState.squares[ownKingInd].check = false
+                    gameState.squares[lastSelectedSquare].check = false
+                    setCheck([false, null])
+                    //Extract elements from current gamestate and push it to the history
+                    const { squares, whiteTurn, moves, captures } = gameState
+                    gameState.history.push({ squares, whiteTurn, moves, captures })
+                    let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
+                    if (oppCheck) {
+                        let color = gameState.whiteTurn ? 'w' : 'b'
+                        setCheck([true, color])
+                        gameState.squares[oppKingInd].check = true
+                        let mate = isMate(gameState.squares, gameState.whiteTurn, gameState.moves)
+                        console.log(mate)
+                    
+                    }
+
                 }
             }
         }
