@@ -1,8 +1,26 @@
 .chessboard{
     background-color:blanchedalmond;
-    width: 48rem;;
-    height:48rem;
+    width: 40vw;
+    height:40vw;
     display: grid;
-    grid-template-columns: repeat(8, 6rem);
-    grid-template-rows: repeat(8, 6rem);
+    grid-template-columns: repeat(8, 5vw);
+    grid-template-rows: repeat(8, 5vw);
+}
+.files{
+    width: 40vw;
+    height:1vw;
+    display: grid;
+    grid-template-columns: repeat(8, 5vw);
+    grid-template-rows: repeat(1, 5vw);  
+}
+.numbers{
+    width: 1vw;
+    height:40vw;
+    display: grid;
+    grid-template-columns: repeat(1, 5vw);
+    grid-template-rows: repeat(8, 5vw); 
+    float: left;
+}
+.container{
+    float: right;
 }

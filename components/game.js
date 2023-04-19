@@ -1,7 +1,9 @@
 import Board from "./board";
+import Sidebar from "./sidebar";
+import styles from "./game.module.css"
 import { useState, useEffect } from 'react';
 import { isCheck, isLegalMove, legalMovesForPiece, isMate, findOwnKing } from "../helpers/rules"
-import Popup from 'reactjs-popup';
+import { Modal, Text, Button, Image, Row, Container, Grid, Card } from "@nextui-org/react";
 
 const _ = require('lodash');
 
@@ -69,16 +71,16 @@ function initGame() { //returns an array representation of the board with all th
 }
 
 function capture(piece, capturesObj) { //updates captured pieces for black and white
-    if (piece.charAt(0) == 'w') {
+    if (piece.charAt(0) === 'w') {
         capturesObj.blackCaptures.push(piece)
-    } else if (piece.charAt(0) == 'b') {
+    } else if (piece.charAt(0) === 'b') {
         capturesObj.whiteCaptures.push(piece)
     }
     return capturesObj
 }
 
 export default function Game() {
-    const [gameState, setGameState] = useState({
+    const initialGameState = {
         squares: initGame(),
         selectedSquare: null,
         whiteTurn: true,
@@ -97,18 +99,20 @@ export default function Game() {
             },
         }]
 
-    });
-    const [open, setOpen] = useState(false)
+    }
+    const [gameState, setGameState] = useState(initialGameState);
+    const [openPromotionMenu, setOpenPromotionMenu] = useState(false)
     const [promotedPiece, setPromotedPiece] = useState(null)
     const [promoteDestIndx, setPromoteDestIndx] = useState(null)
     const [promoteSrcIndx, setPromoteSrcIndx] = useState(null)
-    const [check, setCheck] = useState(false)
+    const [winner, setWinner] = useState(null)
+
     //This use effect handles pawn promotions and determines own checks and opponent checks
     useEffect(() => {
         if (promotedPiece) {
             let i = promoteDestIndx
             let l = promoteSrcIndx
-            let  ownKingInd = findOwnKing(gameState.squares, gameState.whiteTurn)
+            let ownKingInd = findOwnKing(gameState.squares, gameState.whiteTurn)
             gameState.squares[i].piece = promotedPiece
             gameState.whiteTurn = !gameState.whiteTurn
             gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
@@ -132,18 +136,11 @@ export default function Game() {
                 history: gameState.history
             })
             setPromotedPiece(null)
+            setPromoteDestIndx(null)
+            setPromoteSrcIndx(null)
         }
     }, [promotedPiece])
 
-    useEffect(() => {
-        if (check[0]) {
-            if (check[1] === 'b') {
-                return
-            } else if (check[1] === 'w') {
-                return
-            }
-        }
-    }, [check])
     function click(e) {
         let id = e.target.id
         let x = horizontal.indexOf(id.charAt(0))
@@ -158,7 +155,6 @@ export default function Game() {
                 gameState.squares[i].selected = !gameState.squares[i].selected
                 currentSquareInd = i
             }
-            console.log(legalMovesForPiece(gameState.squares, i, gameState.history))
         } else { //If player selects any square other than ones with their own pieces, move selected piece there, taking enemy piece on that square if possible
             if (lastSelectedSquare != null) { //First check if there was a selected piece to move
                 const [valid, enPassant] = isLegalMove(gameState.squares, lastSelectedSquare, i, gameState.moves)
@@ -176,7 +172,7 @@ export default function Game() {
                     if ((gameState.whiteTurn && gameState.squares[i].piece === 'wp' && gameState.squares[i].coordinate.charAt(1) === '8') || (!gameState.whiteTurn && gameState.squares[i].piece === 'bp' && gameState.squares[i].coordinate.charAt(1) === '1')) {
                         setPromoteDestIndx(i)
                         setPromoteSrcIndx(lastSelectedSquare)
-                        setOpen(true)
+                        setOpenPromotionMenu(true)
                         return
                     }
                     let ownKingInd = findOwnKing(gameState.squares, gameState.whiteTurn)
@@ -184,20 +180,17 @@ export default function Game() {
                     gameState.moves.push(gameState.squares[i].piece + gameState.squares[i].coordinate)
                     gameState.squares[ownKingInd].check = false
                     gameState.squares[lastSelectedSquare].check = false
-                    setCheck([false, null])
                     //Extract elements from current gamestate and push it to the history
-                    const { squares, whiteTurn, moves, captures } = gameState
+                    const { squares, whiteTurn, moves, captures } = _.cloneDeep(gameState)
                     gameState.history.push({ squares, whiteTurn, moves, captures })
                     let [oppCheck, oppKingInd] = isCheck(gameState.squares, gameState.whiteTurn, gameState.moves)
                     if (oppCheck) {
-                        let color = gameState.whiteTurn ? 'w' : 'b'
-                        setCheck([true, color])
+                        let currPlayerColor = gameState.whiteTurn ? 'b' : 'w'
                         gameState.squares[oppKingInd].check = true
-                        let mate = isMate(gameState.squares, gameState.whiteTurn, gameState.moves)
-                        console.log(mate)
-                    
+                        if (isMate(gameState.squares, gameState.whiteTurn, gameState.moves)) {
+                            setWinner(currPlayerColor)
+                        }
                     }
-
                 }
             }
         }
@@ -217,7 +210,7 @@ export default function Game() {
     function promote(piece) {
         let color = gameState.whiteTurn ? 'w' : 'b'
         setPromotedPiece(color + piece)
-        setOpen(false)
+        setOpenPromotionMenu(false)
     }
 
     function getPromotionAsset(piece) {
@@ -225,23 +218,59 @@ export default function Game() {
         return `https://www.chess.com/chess-themes/pieces/classic/150/${color + piece}.png`
     }
 
+    function resetHandler() {
+        setGameState(initialGameState)
+        setWinner(null)
+    }
+    function revertToMove(e) {
+        let indx = e.target.value
+        let { squares, whiteTurn, moves, captures } = gameState.history[indx]
+        setGameState({
+            squares: [...squares],
+            selectedSquare: null,
+            whiteTurn: whiteTurn,
+            moves: moves,
+            captures: captures,
+            history: gameState.history
+        })
+    }
     return (
         <div>
-            <Popup open={open} closeOnDocumentClick={false}>
-                <div id="pawn-promotion-modal">
-                    <div className="modal-body">
-                        <img onClick={() => promote('q')} src={getPromotionAsset('q')} />
-                        <img onClick={() => promote('r')} src={getPromotionAsset('r')} />
-                        <img onClick={() => promote('b')} src={getPromotionAsset('b')} />
-                        <img onClick={() => promote('n')} src={getPromotionAsset('n')} />
-                    </div>
-                </div>
-            </Popup>
-            <Board squares={gameState.squares} click={e => click(e)} />
-            {gameState.captures.whiteCaptures.length}
-            {gameState.captures.blackCaptures.length}
+            <Modal
+                open={openPromotionMenu}
+                preventClose>
+                <Modal.Body css={{ backgroundColor: 'rgba(127, 127, 127, 0.8)'}}>
+                    <Row>                
+                        <Image css={{ '&:hover' :{backgroundColor: 'rgba(255, 255, 255, 0.3)'} }} height={120} src={getPromotionAsset('q')} onClick={() => promote('q')} />
+                        <Image css={{ '&:hover' :{backgroundColor: 'rgba(255, 255, 255, 0.3)'} }} height={120} src={getPromotionAsset('r')} onClick={() => promote('r')} />
+                        <Image css={{ '&:hover' :{backgroundColor: 'rgba(255, 255, 255, 0.3)'} }} height={120} src={getPromotionAsset('b')} onClick={() => promote('b')} />
+                        <Image css={{ '&:hover' :{backgroundColor: 'rgba(255, 255, 255, 0.3)'} }} height={120} src={getPromotionAsset('n')} onClick={() => promote('n')} />
+                    </Row>
+                </Modal.Body>
+            </Modal>
+            <Modal
+                open={winner !== null}
+                preventClose>
+                <Modal.Header>
+                    <Text b id="modal-title" size="$3xl">
+                        {winner === 'w' ? 'White Wins!' : winner === 'b' ? 'Black Wins!' : 'Stalemate'}
+                    </Text>
+                </Modal.Header>
+                <Modal.Footer>
+                    <Button auto onPress={resetHandler}>
+                        Play Again
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+            <Grid.Container justify="space-evenly">
+                <Grid>
+                    <Board squares={gameState.squares} click={e => click(e)}/>
+                </Grid>
+                <Grid>
+                    <Sidebar gameState={gameState} winner={winner} resetHandler={resetHandler} revertToMove={(event) => {revertToMove(event)}}/>
+                </Grid>
+            </Grid.Container>
+                
         </div>
-
-
     )
 }
